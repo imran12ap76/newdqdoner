@@ -34,17 +34,17 @@ class Bot(Client):
         )
 
     async def start(self):
-        b_users, b_chats = await db.get_banned()
-        temp.BANNED_USERS = b_users
-        temp.BANNED_CHATS = b_chats
-        await super().start()
-        await Media.ensure_indexes()
+        # Debug: Print session details
+        print(f"Starting bot with SESSION: {SESSION}")
+        
         await Media2.ensure_indexes()
+        await super().start()
         #choose the right db by checking the free space
         stats = await clientDB.command('dbStats')
         #calculating the free db space from bytes to MB
         free_dbSize = round(512-((stats['dataSize']/(1024*1024))+(stats['indexSize']/(1024*1024))), 2)
-        if SECONDDB_URI and free_dbSize<10: #if the primary db have less than 10MB left, use second DB.
+        
+        if SECONDDB_URI and free_dbSize < 32: #if the primary db have less than 10MB left, use second DB.
             tempDict["indexDB"] = SECONDDB_URI
             logging.info(f"Since Primary DB have only {free_dbSize} MB left, Secondary DB will be used to store datas.")
         elif SECONDDB_URI is None:
@@ -52,6 +52,7 @@ class Bot(Client):
             exit()
         else:
             logging.info(f"Since primary DB have enough space ({free_dbSize}MB) left, It will be used for storing datas.")
+        
         await choose_mediaDB()
         me = await self.get_me()
         temp.ME = me.id
@@ -60,12 +61,6 @@ class Bot(Client):
         self.username = '@' + me.username
         logging.info(f"{me.first_name} with for Pyrogram v{__version__} (Layer {layer}) started on {me.username}.")
         logging.info(LOG_STR)
-        logging.info(script.LOGO)
-        tz = pytz.timezone('Asia/Kolkata')
-        today = date.today()
-        now = datetime.now(tz)
-        time = now.strftime("%H:%M:%S %p")
-        await self.send_message(chat_id=LOG_CHANNEL, text=script.RESTART_TXT.format(today, time))
 
     async def stop(self, *args):
         await super().stop()
@@ -105,11 +100,14 @@ class Bot(Client):
             new_diff = min(200, limit - current)
             if new_diff <= 0:
                 return
-            messages = await self.get_messages(chat_id, list(range(current, current+new_diff+1)))
+            messages = await self.get_messages(chat_id, list(range(current, current + new_diff + 1)))
             for message in messages:
                 yield message
                 current += 1
 
 
 app = Bot()
+
+# Debug: Print start message
+print("Bot is starting...")
 app.run()
